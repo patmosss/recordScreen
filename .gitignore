@@ -24,6 +24,7 @@
 hs_err_pid*
 recordScreen.iml
 .idea/
+.gitignore
 
 ### Maven template
 target/
