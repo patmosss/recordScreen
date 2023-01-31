@@ -1,4 +1,4 @@
-package recordSCR;
+package recordSCR.main;
 
 
 public enum AVType {
@@ -12,9 +12,4 @@ public enum AVType {
     AVType(String key) {
         this.key = key;
     }
-
-    public void setKey(String key) {
-        this.key = key;
-    }
-
 }
