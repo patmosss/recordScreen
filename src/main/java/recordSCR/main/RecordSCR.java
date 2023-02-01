@@ -1,6 +1,7 @@
 package recordSCR.main;
 
 import org.bytedeco.ffmpeg.global.avcodec;
+import org.bytedeco.javacpp.BytePointer;
 import org.bytedeco.javacv.*;
 import org.bytedeco.javacv.Frame;
 import org.bytedeco.opencv.global.opencv_imgproc;
@@ -13,6 +14,7 @@ import recordSCR.pojo.WatermarkInfo;
 import recordSCR.utils.ScreenCanvas;
 import recordSCR.utils.ScreenUtils;
 import javax.sound.sampled.*;
+import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.net.URL;
@@ -253,6 +255,7 @@ public class RecordSCR implements Module {
         stop(grabber, recorder, cFrame);
     }
 
+
     /**
      * <h3 color='#4B0082'>录制屏幕的方法 (方法二 代理)</h3>
      * @param outputFile 输出文件/地址(可以是本地文件，也可以是流媒体服务器地址)
@@ -260,7 +263,7 @@ public class RecordSCR implements Module {
      * @param framerate 视频帧率:最低 25(即每秒25张图片,低于25就会出现闪屏)
      */
     @Override
-    public void recordScreen(String outputFile, int audio_device_index, int framerate, String screen_device_index) throws Exception {
+    public void recordScreen(String outputFile, int audio_device_index, int framerate, String screen_device_index, String watermarkText) throws Exception {
 
         FFmpegFrameGrabber grabber = new FFmpegFrameGrabber("desktop"); //读取屏幕
 
@@ -391,14 +394,7 @@ public class RecordSCR implements Module {
 
         CanvasFrame cFrame = ScreenCanvas.canvas(grabber);
 
-        WatermarkInfo watermarkInfo = new WatermarkInfo();
-        watermarkInfo.setPoint(new Point(200, 200));
-        watermarkInfo.setScalar(new Scalar(0, 75, 0, 130));
-
-        // 水印文字位置
-        //Point point2 = new Point(200, 200);
-        // 颜色
-        //Scalar scalar2 = new Scalar(255, 0, 0, 0);
+        WatermarkInfo watermarkInfo = watermark(); //水印信息
 
         Frame rotatedFrame = converter.convert(grabbedImage);
         //Frame capturedFrame = null;
@@ -409,13 +405,16 @@ public class RecordSCR implements Module {
                 rotatedFrame = converter.convert(grabbedImage);
 
                 // 加文字水印，opencv_imgproc.putText（图片，水印文字（无法识别中文），文字位置，字体，字体大小，字体颜色，字体粗度，文字反锯齿，是否翻转文字）
-                opencv_imgproc.putText(converter.convertToMat(rotatedFrame), "Patmos!", watermarkInfo.getPoint(), opencv_imgproc.CV_FONT_VECTOR0, 4, watermarkInfo.getScalar(), 4, 0,
-                        false);
-
-
+                opencv_imgproc.putText(converter.convertToMat(rotatedFrame),
+                        watermarkText,
+                        watermarkInfo.getPoint(),
+                        opencv_imgproc.CV_FONT_VECTOR0,
+                        watermarkInfo.getFontSize(),
+                        watermarkInfo.getScalar(),
+                        watermarkInfo.getFontThickness(),
+                        watermarkInfo.getText_antialiasing(),
+                        watermarkInfo.getIsFlip());
                 cFrame.showImage(rotatedFrame);
-                //cFrame.showImage(converter.convert(mat));
-
             }
 
             // 定义我们的开始时间，当开始时需要先初始化时间戳
@@ -441,14 +440,9 @@ public class RecordSCR implements Module {
 
     }
 
-    /**
-     * TODO: 水印功能
-     */
     @Override
-    public void watermark() {
-
-
-
+    public WatermarkInfo watermark() {
+        return new WatermarkInfo();
     }
 
 
