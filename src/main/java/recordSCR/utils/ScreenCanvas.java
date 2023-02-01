@@ -18,8 +18,8 @@ public class ScreenCanvas  {
         CanvasFrame cFrame = new CanvasFrame("桌面录制", CanvasFrame.getDefaultGamma() / grabber.getGamma());
         cFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE); // 关闭窗口则退出程序
         cFrame.setBounds(600, 300, 500, 400);
-        //cFrame.setAlwaysOnTop(true);
-        //cFrame.setResizable(true);
+        cFrame.setAlwaysOnTop(true);
+        cFrame.setResizable(true);
 
         JButton jbt = new JButton("1");
 

@@ -3,17 +3,24 @@ package recordSCR.main;
 import org.bytedeco.ffmpeg.global.avcodec;
 import org.bytedeco.javacv.*;
 import org.bytedeco.javacv.Frame;
+import org.bytedeco.opencv.global.opencv_imgproc;
 import org.bytedeco.opencv.opencv_core.IplImage;
+import org.bytedeco.opencv.opencv_core.Point;
+import org.bytedeco.opencv.opencv_core.Scalar;
 import recordSCR.module.Module;
 import recordSCR.pojo.ScreenInfo;
+import recordSCR.pojo.WatermarkInfo;
 import recordSCR.utils.ScreenCanvas;
 import recordSCR.utils.ScreenUtils;
-
 import javax.sound.sampled.*;
+import java.io.FileReader;
+import java.io.IOException;
+import java.net.URL;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.ShortBuffer;
 import java.util.Map;
+import java.util.Properties;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
@@ -21,6 +28,63 @@ import java.util.concurrent.TimeUnit;
  * Windows下录制屏幕
  */
 public class RecordSCR implements Module {
+
+    private static String format;
+    private static String framerates;
+    private static String offset_x;
+    private static String offset_y;
+    private static String draw_mouse;
+    private static String tune_v;
+    private static String preset_v;
+    private static int bitrate_v;
+    private static String crf_a;
+    private static int quality_a;
+    private static int bitrate_a;
+    private static int samplerate_a;
+    private static int channels_a;
+
+    // 音频捕获
+    private static float sampleRate;
+    private static int sampleSizeInBits;
+    private static boolean signed;
+    private static boolean bigEndian;
+
+
+    private static Properties p = new Properties();
+
+
+    static {
+        URL resource = RecordSCR.class.getClassLoader().getResource("config/recordScreen.properties");
+
+        try {
+
+            String path = resource.getPath();
+            if (path != null) {
+                p.load(new FileReader(path));
+                format = p.getProperty("rs.format");
+                framerates = p.getProperty("rs.framerate");
+                offset_x = p.getProperty("rs.offset_x");
+                offset_y = p.getProperty("rs.offset_y");
+                draw_mouse = p.getProperty("rs.draw_mouse");
+                tune_v = p.getProperty("rs.tune_v");
+                preset_v = p.getProperty("rs.preset_v");
+                bitrate_v = Integer.parseInt(p.getProperty("rs.bitrate_v"));
+                crf_a = p.getProperty("rs.constant_rate_factor_a");
+                quality_a = Integer.parseInt(p.getProperty("rs.quality_a"));
+                bitrate_a = Integer.parseInt(p.getProperty("rs.bitrate_a"));
+                samplerate_a = Integer.parseInt(p.getProperty("rs.samplerate_a"));
+                channels_a = Integer.parseInt(p.getProperty("rs.channels_a"));
+                sampleRate = Float.parseFloat(p.getProperty("rs.sampleRate"));
+                sampleSizeInBits = Integer.parseInt(p.getProperty("rs.sampleSizeInBits"));
+                signed = Boolean.parseBoolean(p.getProperty("rs.signed"));
+                bigEndian = Boolean.parseBoolean(p.getProperty("rs.bigEndian"));
+            }
+        } catch (IOException e) {
+            System.out.println("找不到配置文件");
+            e.printStackTrace();
+        }
+
+    }
 
     /**
      * <h3 color='#4B0082'>录制屏幕的方法 (方法一)</h3>
@@ -30,13 +94,13 @@ public class RecordSCR implements Module {
      */
     public void recordingScreen(String outputFile, int audio_device_index, int framerate, String screen_device_index) throws Exception {
 
-        FFmpegFrameGrabber grabber = new FFmpegFrameGrabber("desktop"); //读取屏幕
+        FFmpegFrameGrabber grabber = new FFmpegFrameGrabber(AVType.DESKTOP); //读取屏幕
 
-        grabber.setFormat("gdigrab"); // 基于gdigrab的输入格式
+        grabber.setFormat(format);
 
-        grabber.setOption("framerate", "60"); //设置60帧每秒的高帧率
-        grabber.setOption("offset_x", "0"); //截屏起始点X，全屏录制不设置此参数
-        grabber.setOption("offset_y", "0"); //截屏起始点Y，全屏录制不设置此参数
+        grabber.setOption(AVType.FRAMERATE, framerates);
+        grabber.setOption(AVType.OFFSET_X, offset_x);
+        grabber.setOption(AVType.OFFSET_Y, offset_y);
 
 
         // TODO: 录取不同的屏幕设备[待完成] 目前是2块屏幕 0:3000*2000 1:1920*1080
@@ -47,41 +111,41 @@ public class RecordSCR implements Module {
             }
         }
 
-        grabber.setOption("draw_mouse", "1"); //绘制鼠标：1 隐藏鼠标：0
+        grabber.setOption(AVType.DRAW_MOUSE, draw_mouse);
         start(grabber);
 
-        OpenCVFrameConverter.ToIplImage converter = new OpenCVFrameConverter.ToIplImage(); //转换器
+        OpenCVFrameConverter.ToIplImage converter = new OpenCVFrameConverter.ToIplImage();
         IplImage grabbedImage = converter.convert(grabber.grab());
 
 
         FFmpegFrameRecorder recorder = new FFmpegFrameRecorder(outputFile, grabbedImage.width(), grabbedImage.height(), 2);
         recorder.setInterleaved(true);
 
-        recorder.setVideoOption(AVType.Tune.key, "zerolatency");
+        recorder.setVideoOption(AVType.TUNE, tune_v);
 
-        recorder.setVideoOption(AVType.Preset.key, "ultrafast");
+        recorder.setVideoOption(AVType.PRESET, preset_v);
 
-        recorder.setVideoOption(AVType.Constant_Rate_Factor.key, String.valueOf(framerate));
+        recorder.setVideoOption(AVType.CONSTANT_RATE_FACTOR, String.valueOf(framerate));
 
-        recorder.setVideoBitrate(2000000); // 2000 kb/s, 720P视频的合理比特率范围
+        recorder.setVideoBitrate(bitrate_v);
 
         recorder.setVideoCodec(avcodec.AV_CODEC_ID_H264); // h264编/解码器
 
-        recorder.setFormat(AVType.Flv.key); // 封装格式flv
+        recorder.setFormat(AVType.FLV);
 
-        recorder.setFrameRate(framerate); // 视频帧率(保证视频质量的情况下最低25，低于25会出现闪屏)
+        recorder.setFrameRate(framerate);
 
         recorder.setGopSize(framerate * 2); // 关键帧间隔，一般与帧率相同或者是视频帧率的两倍
 
-        recorder.setAudioOption(AVType.Constant_Rate_Factor.key, "0"); // 不可变(固定)音频比特率
+        recorder.setAudioOption(AVType.CONSTANT_RATE_FACTOR, crf_a);
 
-        recorder.setAudioQuality(0); // 最高质量
+        recorder.setAudioQuality(quality_a);
 
-        recorder.setAudioBitrate(192000); // 音频比特率
+        recorder.setAudioBitrate(bitrate_a);
 
-        recorder.setSampleRate(44100); // 音频采样率
+        recorder.setSampleRate(samplerate_a);
 
-        recorder.setAudioChannels(2); // 双通道(立体声)
+        recorder.setAudioChannels(channels_a);
 
         recorder.setAudioCodec(avcodec.AV_CODEC_ID_AAC); // 音频编/解码器
 
@@ -95,7 +159,7 @@ public class RecordSCR implements Module {
               采样率:44.1k;采样率位数:16位;立体声(stereo);是否签名;true:
               big-endian字节顺序,false:little-endian字节顺序(详见:ByteOrder类)
              */
-            AudioFormat audioFormat = new AudioFormat(44100.0F, 16, 2, true, false);
+            AudioFormat audioFormat = new AudioFormat(sampleRate, sampleSizeInBits, channels_a, signed, bigEndian);
 
             // 通过AudiSystem获取本地音频混合器信息
             Mixer.Info[] minfoSet = AudioSystem.getMixerInfo();
@@ -226,23 +290,23 @@ public class RecordSCR implements Module {
         FFmpegFrameRecorder recorder = new FFmpegFrameRecorder(outputFile, grabbedImage.width(), grabbedImage.height(), 2);
         recorder.setInterleaved(true);
 
-        recorder.setVideoOption(AVType.Tune.key, "zerolatency");
+        recorder.setVideoOption(AVType.TUNE, "zerolatency");
 
-        recorder.setVideoOption(AVType.Preset.key, "ultrafast");
+        recorder.setVideoOption(AVType.PRESET, "ultrafast");
 
-        recorder.setVideoOption(AVType.Constant_Rate_Factor.key, String.valueOf(framerate));
+        recorder.setVideoOption(AVType.CONSTANT_RATE_FACTOR, String.valueOf(framerate));
 
         recorder.setVideoBitrate(2000000); // 2000 kb/s, 720P视频的合理比特率范围
 
         recorder.setVideoCodec(avcodec.AV_CODEC_ID_H264); // h264编/解码器
 
-        recorder.setFormat(AVType.Flv.key); // 封装格式flv
+        recorder.setFormat(AVType.FLV); // 封装格式flv
 
         recorder.setFrameRate(framerate); // 视频帧率(保证视频质量的情况下最低25，低于25会出现闪屏)
 
         recorder.setGopSize(framerate * 2); // 关键帧间隔，一般与帧率相同或者是视频帧率的两倍
 
-        recorder.setAudioOption(AVType.Constant_Rate_Factor.key, "0"); // 不可变(固定)音频比特率
+        recorder.setAudioOption(AVType.CONSTANT_RATE_FACTOR, "0"); // 不可变(固定)音频比特率
 
         recorder.setAudioQuality(0); // 最高质量
 
@@ -327,6 +391,15 @@ public class RecordSCR implements Module {
 
         CanvasFrame cFrame = ScreenCanvas.canvas(grabber);
 
+        WatermarkInfo watermarkInfo = new WatermarkInfo();
+        watermarkInfo.setPoint(new Point(200, 200));
+        watermarkInfo.setScalar(new Scalar(0, 75, 0, 130));
+
+        // 水印文字位置
+        //Point point2 = new Point(200, 200);
+        // 颜色
+        //Scalar scalar2 = new Scalar(255, 0, 0, 0);
+
         Frame rotatedFrame = converter.convert(grabbedImage);
         //Frame capturedFrame = null;
         // 执行抓取(capture)过程
@@ -334,8 +407,17 @@ public class RecordSCR implements Module {
             if (cFrame.isVisible()) {
                 // 本机预览要发送的帧
                 rotatedFrame = converter.convert(grabbedImage);
+
+                // 加文字水印，opencv_imgproc.putText（图片，水印文字（无法识别中文），文字位置，字体，字体大小，字体颜色，字体粗度，文字反锯齿，是否翻转文字）
+                opencv_imgproc.putText(converter.convertToMat(rotatedFrame), "Patmos!", watermarkInfo.getPoint(), opencv_imgproc.CV_FONT_VECTOR0, 4, watermarkInfo.getScalar(), 4, 0,
+                        false);
+
+
                 cFrame.showImage(rotatedFrame);
+                //cFrame.showImage(converter.convert(mat));
+
             }
+
             // 定义我们的开始时间，当开始时需要先初始化时间戳
             if (startTime == 0) {
                 startTime = System.currentTimeMillis();
@@ -353,8 +435,10 @@ public class RecordSCR implements Module {
 
             // 发送帧
             record(recorder, rotatedFrame);
+
         }
         stop(grabber, recorder, cFrame);
+
     }
 
     /**
@@ -362,8 +446,9 @@ public class RecordSCR implements Module {
      */
     @Override
     public void watermark() {
-        int i = 1;
-        System.out.println("实现水印功能");
+
+
+
     }
 
 
