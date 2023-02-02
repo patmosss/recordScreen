@@ -18,7 +18,7 @@ public class ShowDesktop {
           @param screen_device_index 0: 本机设备 1：全屏
          */
 
-        //recordSCR.recordingScreen("D:\\Temp\\" + date + UUID.randomUUID() +".flv", 4,  25, "0");
+        recordSCR.recordingScreen("D:\\Temp\\" + date + UUID.randomUUID() +".flv", 4,  25, "0", "test1");
 
         /*
             outputFile:输出文件/地址(可以是本地文件，也可以是流媒体服务器地址)
@@ -27,7 +27,7 @@ public class ShowDesktop {
             screen_device_index 0: 本机设备 1：全屏
             watermarkText: 水印文字（暂时无法识别中文）
          */
-        recordSCR.recordScreen("D:\\Temp\\" + date + UUID.randomUUID() +".flv", 4,  25, "0", "test");
+        //recordSCR.recordScreen("D:\\Temp\\" + date + UUID.randomUUID() +".flv", 4,  25, "0", "test2");
 
     }
 }

@@ -1,5 +1,6 @@
 package recordSCR.main;
 
+import com.sun.tools.javac.util.StringUtils;
 import org.bytedeco.ffmpeg.global.avcodec;
 import org.bytedeco.javacpp.BytePointer;
 import org.bytedeco.javacv.*;
@@ -22,6 +23,7 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.ShortBuffer;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Properties;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -94,7 +96,7 @@ public class RecordSCR implements Module {
      * @param audio_device_index 音频设备，本机默认是4
      * @param framerate 视频帧率:最低 25(即每秒25张图片,低于25就会出现闪屏)
      */
-    public void recordingScreen(String outputFile, int audio_device_index, int framerate, String screen_device_index) throws Exception {
+    public void recordingScreen(String outputFile, int audio_device_index, int framerate, String screen_device_index, String watermarkText) throws Exception {
 
         FFmpegFrameGrabber grabber = new FFmpegFrameGrabber(AVType.DESKTOP); //读取屏幕
 
@@ -224,13 +226,26 @@ public class RecordSCR implements Module {
 
         CanvasFrame cFrame = ScreenCanvas.canvas(grabber);
 
+        WatermarkInfo watermarkInfo = watermark(); //水印信息
+
         Frame rotatedFrame = converter.convert(grabbedImage);
-        //Frame capturedFrame = null;
+
         // 执行抓取(capture)过程
         while (cFrame.isVisible() && (grabbedImage = converter.convert(grabber.grab())) != null) {
             if (cFrame.isVisible()) {
                 // 本机预览要发送的帧
                 rotatedFrame = converter.convert(grabbedImage);
+                // 加文字水印，opencv_imgproc.putText（图片，水印文字（无法识别中文），文字位置，字体，字体大小，字体颜色，字体粗度，文字反锯齿，是否翻转文字）
+                opencv_imgproc.putText(converter.convertToMat(rotatedFrame),
+                        watermarkText == null ? "" : watermarkText,
+                        watermarkInfo.getPoint(),
+                        opencv_imgproc.CV_FONT_VECTOR0,
+                        watermarkInfo.getFontSize(),
+                        watermarkInfo.getScalar(),
+                        watermarkInfo.getFontThickness(),
+                        watermarkInfo.getText_antialiasing(),
+                        watermarkInfo.getIsFlip());
+
                 cFrame.showImage(rotatedFrame);
             }
             // 定义我们的开始时间，当开始时需要先初始化时间戳
@@ -257,7 +272,7 @@ public class RecordSCR implements Module {
 
 
     /**
-     * <h3 color='#4B0082'>录制屏幕的方法 (方法二 代理)</h3>
+     * <h3 color='#4B0082'>录制屏幕的方法 (方法二)</h3>
      * @param outputFile 输出文件/地址(可以是本地文件，也可以是流媒体服务器地址)
      * @param audio_device_index 音频设备，本机默认是4
      * @param framerate 视频帧率:最低 25(即每秒25张图片,低于25就会出现闪屏)
@@ -393,6 +408,7 @@ public class RecordSCR implements Module {
         long videoTS = 0;
 
         CanvasFrame cFrame = ScreenCanvas.canvas(grabber);
+        //CanvasFrame cFrame = ScreenUtils.method(grabber);
 
         WatermarkInfo watermarkInfo = watermark(); //水印信息
 

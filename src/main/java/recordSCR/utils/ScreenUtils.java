@@ -1,9 +1,9 @@
 package recordSCR.utils;
 
+import org.bytedeco.javacv.CanvasFrame;
+import org.bytedeco.javacv.FFmpegFrameGrabber;
 import recordSCR.pojo.ScreenInfo;
-
 import javax.swing.*;
-import java.applet.Applet;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -34,50 +34,25 @@ public class ScreenUtils {
         return scrInfoMap;
     }
 
-    public static void main(String[] args) {
-/*
-        HashMap<String, ScreenInfo> scrInfo = getSCRInfo();
-        for (Map.Entry<String, ScreenInfo> stringScreenInfoEntry : scrInfo.entrySet()) {
-            System.out.println(stringScreenInfoEntry.getKey() + stringScreenInfoEntry.getValue().getScrWidth() + stringScreenInfoEntry.getValue().getScrHeight());
-        }*/
 
-       /* SwingUtilities.invokeLater(new Runnable() {
-            @Override
-            public void run() {
-                method();
-            }
-        });*/
-
-        Butt1on a = new Butt1on();
-        a.init();
-
-    }
-
-    static class Butt1on extends Applet {
-        @Override
-        public void init() {
-            setLayout(new GridLayout(3,2));
-            add(new Button("1"));
-            add(new Button("2"));
-            add(new Button("3"));
-            add(new Button("4"));
-            add(new Button("5"));
-            add(new Button("6"));
-            add(method());
-        }
+    public static CanvasFrame method(FFmpegFrameGrabber grabber) {
+        //JFrame frame = new JFrame("JFrame");
+        // javaCV提供了优化非常好的硬件加速组件来帮助显示我们抓取的摄像头视频
+        CanvasFrame frame = new CanvasFrame("桌面录制", CanvasFrame.getDefaultGamma() / grabber.getGamma());
 
 
-    }
+       /* frame.setAlwaysOnTop(true);
+        frame.setResizable(true);
+        frame.setLocationRelativeTo(null); //窗口置于屏幕中央
+        frame.setVisible(true);*/
 
-    private static Component method() {
-        JFrame frame = new JFrame("JFrame");
 
         JButton bt1 = new JButton("开始录制");
         JButton bt2 = new JButton("关闭录制");
 
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
-        frame.setSize(800, 500); //窗体屏幕长和宽
+        frame.setSize(200, 200); //窗体屏幕长和宽
         //frame.setBounds(1,2,20,10);
         //frame.setLocation(1,2); //设置一个左上角顶点在（1，2）的窗体。
 
