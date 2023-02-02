@@ -1,5 +1,6 @@
 package recordSCR.module;
 
+import recordSCR.pojo.BaseInfo;
 import recordSCR.pojo.WatermarkInfo;
 
 /**
@@ -7,7 +8,7 @@ import recordSCR.pojo.WatermarkInfo;
  */
 public interface  Module {
     // 录制模块
-    void recordScreen(String outputFile, int audio_device_index, int framerate, String screen_device_index, String watermarkText) throws Exception;
+    void recordScreen(BaseInfo baseInfo, WatermarkInfo watermarkInfo) throws Exception;
     // 水印模块
     WatermarkInfo watermark() ;
 }

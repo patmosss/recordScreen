@@ -6,6 +6,7 @@ public class ScreenInfo {
     int ScrHeight;
     int ScrWidth;
 
+
     public ScreenInfo() {
     }
 

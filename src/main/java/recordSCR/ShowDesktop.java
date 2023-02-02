@@ -1,6 +1,9 @@
 package recordSCR;
 
 import recordSCR.main.RecordSCR;
+import recordSCR.pojo.AudioType;
+import recordSCR.pojo.BaseInfo;
+import recordSCR.pojo.WatermarkInfo;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.UUID;
@@ -10,6 +13,9 @@ public class ShowDesktop {
         RecordSCR recordSCR = new RecordSCR();
         String date = new SimpleDateFormat("yyyy-MM-dd").format(new Date());
 
+        BaseInfo bi1 = new BaseInfo("D:\\Temp\\" + date + UUID.randomUUID() +".flv",
+                4, 25, AudioType.STEREO, "0");
+
         /*
           录制屏幕
           @param outputFile 输出文件/地址(可以是本地文件，也可以是流媒体服务器地址)
@@ -17,8 +23,8 @@ public class ShowDesktop {
           @param framerate 视频帧率:最低 25(即每秒25张图片,低于25就会出现闪屏)
           @param screen_device_index 0: 本机设备 1：全屏
          */
-
-        recordSCR.recordingScreen("D:\\Temp\\" + date + UUID.randomUUID() +".flv", 4,  25, "0", "test1");
+        WatermarkInfo wi1 = new WatermarkInfo("wi1");
+        recordSCR.recordingScreen(bi1, wi1);
 
         /*
             outputFile:输出文件/地址(可以是本地文件，也可以是流媒体服务器地址)
@@ -27,7 +33,15 @@ public class ShowDesktop {
             screen_device_index 0: 本机设备 1：全屏
             watermarkText: 水印文字（暂时无法识别中文）
          */
-        //recordSCR.recordScreen("D:\\Temp\\" + date + UUID.randomUUID() +".flv", 4,  25, "0", "test2");
+
+
+
+        // 水印文字 水印图片路径 是否水印图片桌面置上
+        WatermarkInfo wi = new WatermarkInfo("test1", "D:\\Temp\\1.jpg", 0);
+        //WatermarkInfo wi = new WatermarkInfo("wi1");
+        //WatermarkInfo wi = new WatermarkInfo("D:\\Temp\\1.jpg", 0);
+
+        //recordSCR.recordScreen(bi1, wi);
 
     }
 }

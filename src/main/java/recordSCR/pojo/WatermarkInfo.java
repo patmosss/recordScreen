@@ -10,18 +10,27 @@ import org.bytedeco.opencv.opencv_core.Scalar;
  */
 public class WatermarkInfo {
 
+    // 文字水印
     private String text;           //水印文字（无法识别中文）
     private Point point;           //水印位置
-    private int fontSize;          //字体大小
-    private Scalar scalar;         //文字颜色
+    private int fontSize;           //字体大小
+    private Scalar scalar;        //文字颜色
     private int fontThickness;     //字体粗度
     private int text_antialiasing; //文字反锯齿
     private boolean isFlip;        //是否翻转
 
+    // 图片水印
+    String ImagePath;              //图片路径
+    int isCover = 0;                   //是否覆盖 0:不覆盖 1:覆盖
+
 
     public WatermarkInfo() {
         text = "";
-        point = new Point(200, 200);
+        image();
+    }
+
+    private void text() {
+        point = new Point(100, 100);
         fontSize = 4;
         scalar = new Scalar(0, 0, 0, 0);
         fontThickness = 4;
@@ -29,14 +38,52 @@ public class WatermarkInfo {
         isFlip = false;
     }
 
-    public WatermarkInfo(String text, Point point, int fontSize, Scalar scalar, int fontThickness, int text_antialiasing, boolean isFlip) {
+    public void image() {
+        text();
+        isCover = 0;
+    }
+
+    public WatermarkInfo(String text) {
+        text();
         this.text = text;
-        this.point = point;
-        this.fontSize = fontSize;
-        this.scalar = scalar;
-        this.fontThickness = fontThickness;
-        this.text_antialiasing = text_antialiasing;
-        this.isFlip = isFlip;
+    }
+
+    public WatermarkInfo(String imagePath, int isCover) {
+        image();
+        ImagePath = imagePath;
+        this.isCover = isCover;
+    }
+
+    public WatermarkInfo(String text, String imagePath, int isCover) {
+        image();
+        this.text = text;
+        ImagePath = imagePath;
+        this.isCover = isCover;
+    }
+
+
+    public boolean isFlip() {
+        return isFlip;
+    }
+
+    public void setFlip(boolean flip) {
+        isFlip = flip;
+    }
+
+    public String getImagePath() {
+        return ImagePath;
+    }
+
+    public void setImagePath(String imagePath) {
+        ImagePath = imagePath;
+    }
+
+    public int getIsCover() {
+        return isCover;
+    }
+
+    public void setIsCover(int isCover) {
+        this.isCover = isCover;
     }
 
     public String getText() {
