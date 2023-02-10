@@ -1,21 +1,21 @@
-package recordSCR.main;
+package recordSCR.design.ModuleImpl;
 
 import org.bytedeco.ffmpeg.global.avcodec;
 import org.bytedeco.javacv.*;
-import org.bytedeco.javacv.Frame;
-import org.bytedeco.opencv.global.opencv_core;
-import org.bytedeco.opencv.global.opencv_imgcodecs;
-import org.bytedeco.opencv.global.opencv_imgproc;
-import org.bytedeco.opencv.opencv_core.*;
+import org.bytedeco.opencv.opencv_core.IplImage;
+import org.bytedeco.opencv.opencv_core.Mat;
+import recordSCR.design.Module;
+import recordSCR.main.AVType;
+import recordSCR.main.RecordSCR;
 import recordSCR.pojo.BaseInfo;
 import recordSCR.pojo.ScreenInfo;
 import recordSCR.pojo.WatermarkInfo;
 import recordSCR.utils.ScreenCanvas;
 import recordSCR.utils.ScreenUtils;
 import javax.sound.sampled.*;
-import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.net.URL;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -26,9 +26,9 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Windows下录制屏幕
+ * 录制实现
  */
-public class RecordSCR {
+public class Recording implements Module {
 
     private static String format;
     private static String framerates;
@@ -49,11 +49,7 @@ public class RecordSCR {
     private static boolean signed;
     private static boolean bigEndian;
 
-    private Mat logo = null;
-    private Mat mask = null;
-
     private static Properties p = new Properties();
-
 
     static {
         URL resource = RecordSCR.class.getClassLoader().getResource("config/recordScreen.properties");
@@ -88,11 +84,14 @@ public class RecordSCR {
 
     }
 
-    /**
-     * <h3 color='#4B0082'>录制屏幕的方法 (方法一)</h3>
-     */
-    public void recordingScreen(BaseInfo baseInfo, WatermarkInfo watermarkInfo) throws Exception {
+    private BaseInfo baseInfo;
 
+    public Recording(BaseInfo baseInfo) {
+        this.baseInfo = baseInfo;
+    }
+
+    @Override
+    public void scene() throws FFmpegFrameGrabber.Exception, NoSuchMethodException, InvocationTargetException, IllegalAccessException {
         if (baseInfo != null) {
 
             FFmpegFrameGrabber grabber = new FFmpegFrameGrabber(AVType.DESKTOP); //读取屏幕
@@ -103,7 +102,6 @@ public class RecordSCR {
             grabber.setOption(AVType.OFFSET_X, offset_x);
             grabber.setOption(AVType.OFFSET_Y, offset_y);
 
-
             for (Map.Entry<String, ScreenInfo> ss : ScreenUtils.getSCRInfo().entrySet()) {
                 if (ss.getKey().equals(baseInfo.getScreen_device_index()) && ss.getKey().equals("0")) {
                     grabber.setImageWidth(ss.getValue().getScrWidth()); //截取的画面宽度，不设置此参数默认为全屏 4920*2000
@@ -112,7 +110,12 @@ public class RecordSCR {
             }
 
             grabber.setOption(AVType.DRAW_MOUSE, draw_mouse);
-            jmarkInfo(watermarkInfo);  //判断水印详情
+
+
+            Watermask watermask = new Watermask();
+            watermask.jmarkInfo(watermask.getWatermarkInfo());
+            // jmarkInfo(watermarkInfo);  //判断水印详情
+
             start(grabber);
 
             OpenCVFrameConverter.ToIplImage converter = new OpenCVFrameConverter.ToIplImage();
@@ -223,8 +226,6 @@ public class RecordSCR {
 
             CanvasFrame cFrame = ScreenCanvas.canvas(grabber);
 
-            double alpha = 0.5;// 图像透明权重值,0-1之间
-
             Frame rotatedFrame = converter.convert(grabbedImage);
 
             // 执行抓取(capture)过程
@@ -233,31 +234,10 @@ public class RecordSCR {
                     // 本机预览要发送的帧
                     rotatedFrame = converter.convert(grabbedImage);
 
-                    Mat mat = converter.convertToMat(rotatedFrame);
+                    Mat mat = getMat(converter, rotatedFrame);
+                    watermask.setMat(mat);
+                    watermask.scene();
 
-                    if (watermarkInfo != null) {
-                        // 加文字水印，opencv_imgproc.putText（图片，水印文字（无法识别中文），文字位置，字体，字体大小，字体颜色，字体粗度，文字反锯齿，是否翻转文字）
-                        opencv_imgproc.putText(mat,
-                                watermarkInfo.getText() == null ? "" : watermarkInfo.getText(),
-                                watermarkInfo.getPoint(),
-                                opencv_imgproc.CV_FONT_VECTOR0,
-                                watermarkInfo.getFontSize(),
-                                watermarkInfo.getScalar(),
-                                watermarkInfo.getFontThickness(),
-                                watermarkInfo.getText_antialiasing(),
-                                watermarkInfo.getIsFlip());
-
-                        if (logo != null) {
-                            // 定义感兴趣区域(位置，logo图像大小)
-                            Mat ROI = mat.apply(new Rect(400, 350, logo.cols(), logo.rows()));
-                            opencv_core.addWeighted(ROI, alpha, logo, 1.0 - alpha, 0.0, ROI);
-                            // 把logo图像复制到感兴趣区域
-
-                            if (watermarkInfo.getIsCover() == 1) {
-                                logo.copyTo(ROI, mask);
-                            }
-                        }
-                    }
                     cFrame.showImage(rotatedFrame);
                 }
                 // 定义我们的开始时间，当开始时需要先初始化时间戳
@@ -283,21 +263,13 @@ public class RecordSCR {
         }
     }
 
-    private void jmarkInfo(WatermarkInfo watermarkInfo) {
-        if (watermarkInfo != null) {
-            String imagePath = watermarkInfo.getImagePath();
-            if (imagePath != null) {
-                File f = new File(imagePath);
-                if (f.exists() && f.isFile()) {
-                    logo = opencv_imgcodecs.imread(imagePath);
-                    mask = opencv_imgcodecs.imread(imagePath, 0);
-                    opencv_imgproc.threshold(mask, mask,254,255, opencv_imgcodecs.IMWRITE_PNG_BILEVEL);
-                } else {
-                    System.out.println("水印图片路径出错,请重试!");
-                    System.exit(0);
-                }
-            }
-        }
+    public static Mat getMat(OpenCVFrameConverter.ToIplImage converter, Frame rotatedFrame) {
+        return converter.convertToMat(rotatedFrame);
+    }
+
+    @Override
+    public String desc() {
+        return "录制";
     }
 
     private void record(FFmpegFrameRecorder recorder, Frame frame) {
@@ -375,5 +347,4 @@ public class RecordSCR {
             System.out.println("关闭摄像头失败");
         }
     }
-
 }
